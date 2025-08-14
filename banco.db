@@ -1,0 +1,10 @@
+SQLite format 3@  
+	timestamp INTEGER NOT NULL, 
+	uid INTEGER, 
+	package_name VARCHAR, 
+	usagetime INTEGER, 
+	cpu_usage FLOAT, 
+	rx_data INTEGER, 
+	tx_data INTEGER, 
+	PRIMARY KEY (timestamp)
+)

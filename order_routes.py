@@ -1,36 +1,37 @@
-from fastapi import APIRouter
-from sqlalchemy import create_engine, Colum, String, Integer
-from sqlalchemy.orm import declarative_base
+from fastapi import APIRouter, Query
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy.orm import sessionmaker
 
+db = create_engine("sqlite:///lives.db")
+metadata = MetaData()
+metadata.reflect(bind=db)
 
-db = create_engine("sqlite:///banco.db")
+processes_table = Table("processes", metadata, autoload_with=db)
 
-base = declarative_base()
-
-#criar as classes/tabelas de banco
-class processes(base):
-    __tablename__ = "processes"
-
-    timestamp = Colum("timestamp", Integer, primary_Key=True, autoincrement=True)
-    uid = Colum("uid", Integer)
-    package_name = Colum("package_name", String)
-    usagetime = Colum("usagetime", int)
-    cpu_usage = Colum("cpu_usage", float)
-    rx_data = Colum("rx_data", Integer)
-    tx_data = Colum("tx_data", Integer)
-
-
-order_router = APIRouter(prefix="/GET", tags="GET")
+Session = sessionmaker(bind=db)
+order_router = APIRouter(prefix="/GET", tags=["GET"])
 
 @order_router.get("/processes")
-async def processes():
-    resposta = await processes.get(base)
-    dados = resposta.json()
-    return {
-        "timestamp" : resposta.timestamp,
-        "uid" : resposta.nome,
-        "package_name" : resposta.usagetime,
-        "usagetime" : resposta.cpu_usage,
-        "rx_data" : resposta.rx_data,
-        "tx_data" : resposta.tx_data
-    }
+async def get_processes(start: int = Query(...), end: int = Query(...)):
+    """
+    Retorna os registros com timestamp entre start e end.
+    """
+    session = Session()
+    resultado = []
+
+    colunas_desejadas = ["timestamp", "uid", "package_name", "usagetime", "cpu_usage", "rx_data", "tx_data"]
+
+    # filtra pelo intervalo de timestamp
+    query = session.execute(
+        processes_table.select().where(
+            processes_table.c.timestamp >= start,
+            processes_table.c.timestamp <= end
+        )
+    ).fetchall()
+
+    for row in query:
+        registro = {col: row[col] for col in colunas_desejadas}
+        resultado.append(registro)
+
+    session.close()
+    return resultado
